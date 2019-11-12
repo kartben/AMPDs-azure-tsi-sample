@@ -1,0 +1,6 @@
+{
+    "EventHubs": {
+        "connectionString": "Endpoint=sb://REPLACE_ME",
+        "eventHubName": "REPLACE_ME" 
+    }
+}

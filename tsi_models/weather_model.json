@@ -1,0 +1,124 @@
+{
+  "put": [
+    {
+      "id": "3a66fad8-cad7-48b1-97ef-f1ffb896bd98",
+      "name": "Weather",
+      "variables": {
+        "Weather": {
+          "kind": "categorical",
+          "value": {
+            "tsx": "$event.[Weather].String"
+          },
+          "filter": {
+            "tsx": "($event.[Weather].String) != null"
+          },
+          "interpolation": {
+            "kind": "step",
+            "boundary": {
+              "span": "PT5M"
+            }
+          },
+          "categories": [
+            {
+              "label": "Rain",
+              "values": [
+                "Rain",
+                "Rain - Drizzle",
+                "Rain - Drizzle - Fog",
+                "Rain - Fog",
+                "Rain - Fog - Blowing Dust",
+                "Rain - Snow"
+              ]
+            },
+            {
+              "label": "Cloudy",
+              "values": [
+                "Cloudy",
+                "Mostly Cloudy"
+              ]
+            },
+            {
+              "label": "Clear",
+              "values": [
+                "Clear",
+                " Mainly Clear"
+              ]
+            },
+            {
+              "label": "Snow",
+              "values": [
+                "Snow",
+                "Moderate Snow",
+                "Snow - Fog",
+                "Snow - Snow Grains",
+                "Snow Grains",
+                "Snow Showers"
+              ]
+            },
+            {
+              "label": "Drizzle",
+              "values": [
+                "Drizzle"
+              ]
+            },
+            {
+              "label": "Moderate Rain",
+              "values": [
+                "Moderate Rain",
+                "Moderate Rain - Fog",
+                "Moderate Rain Showers"
+              ]
+            },
+            {
+              "label": "Thunderstorms",
+              "values": [
+                "Thunderstorms",
+                "Thunderstorms - Moderate Rain",
+                "Thunderstorms - Rain",
+                "Thunderstorms - Rain Showers"
+              ]
+            },
+            {
+              "label": "Fog",
+              "values": [
+                "Fog"
+              ]
+            },
+            {
+              "label": "Heavy Rain",
+              "values": [
+                "Heavy Rain",
+                "Heavy Rain - Fog"
+              ]
+            }
+          ],
+          "defaultCategory": {
+            "label": "N/A"
+          }
+        },
+        "Temperature (C)": {
+          "kind": "numeric",
+          "value": {
+            "tsx": "$event.[Temp (C)].Double"
+          },
+          "filter": null,
+          "interpolation": null,
+          "aggregation": {
+            "tsx": "avg($value)"
+          }
+        },
+        "Humidity (%)": {
+          "kind": "numeric",
+          "value": {
+            "tsx": "$event.[Rel Hum (%)].Double"
+          },
+          "filter": null,
+          "interpolation": null,
+          "aggregation": {
+            "tsx": "avg($value)"
+          }
+        }
+      }
+    }
+  ]
+}
