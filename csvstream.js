@@ -1,7 +1,7 @@
 var fs = require('fs');
 var parse = require('csv-parse');
 const stream = require('stream');
-const {default: PQueue} = require('p-queue');
+const { default: PQueue } = require('p-queue');
 
 const parser = parse({ delimiter: ',', columns: true, cast: true });
 
@@ -12,7 +12,7 @@ const eventHubName = config.get("EventHubs.eventHubName");
 const eventHubProducer = new EventHubProducerClient(connectionString, eventHubName);
 
 
-const queue = new PQueue({concurrency: 5});
+const queue = new PQueue();
 
 class AggregatingTransform extends stream.Transform {
   constructor() {
@@ -23,7 +23,7 @@ class AggregatingTransform extends stream.Transform {
   _transform(record, encoding, callback) {
     //  console.log(record)
     this.buffer.push(record)
-    if (this.buffer.length == 500) {
+    if (this.buffer.length == 1000) {
       callback(null, this.buffer);
       this.buffer = [];
     } else {
@@ -44,7 +44,7 @@ class EventHubPublisher extends stream.Writable {
   }
 
   _write(chunk, encoding, callback) {
-//    console.log(chunk.length);
+    //    console.log(chunk.length);
     eventHubProducer.createBatch().then((eventDataBatch) => {
       let numberOfEventsToSend = chunk.length;
       while (numberOfEventsToSend > 0) {
@@ -76,11 +76,21 @@ debugStream._transform = function (chunk, _, done) {
   done(null, chunk);
 };
 
-for (let i = 0; i < 10; i++) {
-  fs.createReadStream(__dirname + '/Electricity_P.csv')
-  .pipe(parse({ delimiter: ',', columns: true, cast: true }))
-  .pipe(new AggregatingTransform())
-  .pipe(debugStream)
-  .pipe(new EventHubPublisher())
-  .on('error', console.log)
+
+for (i = 0; i < 10; i++) {
+  stream.pipeline(
+    fs.createReadStream(__dirname + '/Electricity_P.csv'),
+    parse({ delimiter: ',', columns: true, cast: true }),
+    new AggregatingTransform(),
+    //  debugStream,
+    new EventHubPublisher(),
+    (err) => {
+      if (err) {
+        console.error('Pipeline failed', err);
+      } else {
+        console.log('Pipeline succeeded');
+      }
+    }
+  );
+//    console.log(i)
 }
