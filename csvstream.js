@@ -21,7 +21,7 @@ class AggregatingTransform extends stream.Transform {
   _transform(record, encoding, callback) {
     //  console.log(record)
     this.buffer.push(record)
-    if (this.buffer.length == 200) {
+    if (this.buffer.length == 100) {
       callback(null, this.buffer);
       this.buffer = [];
     } else {
@@ -36,6 +36,9 @@ class AggregatingTransform extends stream.Transform {
 }
 const aggregator = new AggregatingTransform();
 
+totalMessagesSent = 0;
+
+BATCH_SIZE = 500;
 class EventHubPublisher extends stream.Writable {
 
   constructor() {
@@ -43,29 +46,41 @@ class EventHubPublisher extends stream.Writable {
     this.eventHubProducer = new EventHubProducerClient(connectionString, eventHubName);
   }
 
-  _write(chunk, encoding, callback) {
-    //    console.log(chunk.length);
-    this.eventHubProducer.createBatch().then((eventDataBatch) => {
-      let numberOfEventsToSend = chunk.length;
-      while (numberOfEventsToSend > 0) {
-        // console.log(chunk[chunk.length - numberOfEventsToSend])
-        let wasAdded = eventDataBatch.tryAdd(chunk[chunk.length - numberOfEventsToSend]);
-        if (!wasAdded) {
-          break;
-        }
-        numberOfEventsToSend--;
-      }
+  addMessage(m) {
+    return this.eventDataBatch.tryAdd(m);
+  }
 
-      queue.add(() => this.eventHubProducer.sendBatch(eventDataBatch)).then(() => {
+  scheduleSendBatch(callback, flush) {
+    if (flush || this.eventDataBatch.count == BATCH_SIZE) {
+      queue.add(() => this.eventHubProducer.sendBatch(this.eventDataBatch)).then(() => {
+        console.log(`${new Date()} -- send enqueued ${this.eventDataBatch.count} messages. Total ${totalMessagesSent += this.eventDataBatch.count}`)
+        delete this.eventDataBatch;
         callback();
-//        console.log(`${new Date()} -- send enqueued ${chunk.length} messages`)
       }).catch(callback);
+    } else {
+      callback();
+    }
+  }
 
-      // eventHubProducer.sendBatch(eventDataBatch).then(() => {
-      //   callback();
-      //   console.log('sent ', chunk.length, ' elements')
-      // }).catch(callback)
-    }).catch(callback)
+  _write(chunk, encoding, callback) {
+    if (typeof this.eventDataBatch == "undefined") {
+      this.eventHubProducer.createBatch().then((edb) => {
+        this.eventDataBatch = edb;
+        if (!this.addMessage(chunk)) {
+          callback('Error adding message to batch');
+        }
+        this.scheduleSendBatch(callback);
+      }).catch(callback)
+    } else {
+      if (!this.addMessage(chunk)) {
+        callback('Error adding message to batch');
+      }
+      this.scheduleSendBatch(callback);
+    }
+  }
+
+  _final(callback) {
+    this.scheduleSendBatch(callback, true);
   }
 }
 const eventHubPublisher = new EventHubPublisher();
@@ -78,11 +93,11 @@ debugStream._transform = function (chunk, _, done) {
 };
 
 
-for (i = 0; i < 1; i++) {
+for (i = 0; i < 40; i++) {
   stream.pipeline(
-    fs.createReadStream(__dirname + '/Electricity_P.csv'),
+    fs.createReadStream(__dirname + '/Climate_HourlyWeather.csv'),
     parse({ delimiter: ',', columns: true, cast: true }),
-    new AggregatingTransform(),
+    // new AggregatingTransform(),
     //  debugStream,
     new EventHubPublisher(),
     (err) => {
@@ -93,5 +108,5 @@ for (i = 0; i < 1; i++) {
       }
     }
   );
-//    console.log(i)
+  //    console.log(i)
 }
